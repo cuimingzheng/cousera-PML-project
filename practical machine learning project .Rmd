@@ -1,0 +1,95 @@
+---
+output:
+  html_document: default
+  pdf_document: default
+---
+Practical machine learning course project
+=========================================
+
+## Cuiming Zheng
+##Oct 16,2017
+
+# Introduction
+In this project,the goal is to use data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants. They were asked to perform barbell lifts correctly and incorrectly in 5 different ways. The data for this project come from this source: http://groupware.les.inf.puc-rio.br/har. the goal is to predict the manner in which they did the exercise . This is the "classe" variable in the training set. 
+
+#Summary
+I download the data in my computer. then clean the data to remove NA values and near 0 varialbes as well as non relevant variables. then I create data partation for training dataset.  Since this is predict for classe, I comaprared  models build with rpart method and random forest method. the result showed rnadom forest is more accuarate with 99.9% accuacy. I used 10 fold cross validation to increase accuacy for prediction. I use to model build from training data to predict test data and calculate the out sample error rate is low as 0.49%. 
+
+# Getting the data
+
+##following is code for Loading and preprocessing the data
+```{r echo = TRUE}
+
+url="https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv"
+
+download.file(url,destfile="C:/Users/u292859/Desktop/data science/PML/pml-training.csv")
+data<-read.csv("pml-training.csv" )
+
+url1="https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv"
+download.file(url1,destfile="C:/Users/u292859/Desktop/data science/PML/pml-test.csv")
+testdata<-read.csv("pml-test.csv" )
+dim(data)
+dim(testdata)
+plot(data$classe,pch=19)
+```
+#Cleanning the data
+## Following is code for data processing
+* follwoing is code for remove NA colomns and near 0 varaibles
+```{r echo = TRUE}
+library(caret)
+nsv<-nearZeroVar(data)
+new<-data[,-nsv]
+dim(new)
+nacol<-which(colSums(is.na(new))>19000)
+newtrain<-new[,-c(nacol)]
+```
+* following is code that remove first 6 variables
+```{r echo = TRUE}
+protrain<-newtrain[,-c(1:6)]
+```
+
+* following is code for data partition for training dataset
+```{r echo = TRUE}
+inTrain = createDataPartition(protrain$classe, p = 3/4)[[1]]
+training = protrain[ inTrain,]
+testing = protrain[-inTrain,]
+dim(training)
+dim(testing)
+```
+## Build prediction model 
+
+ following are r code to build random forest model using traning data. choosed 10 fold of cross validation 
+```{r echo = TRUE} 
+model1<-train(classe~.,method="rf",data=training,trControl=trainControl(method="cv"),number=10)
+model1$finalModel
+```
+
+
+following use the model build from training data to predict testing data and evaluate prediction accuracy 
+```{r echo = TRUE} 
+pred<-predict(model1,testing)
+confusionMatrix(testing$classe,pred)
+```
+following are R code to predict testdata using random forest model and eveluate prediction accuracy. Accuracy : 0.9988. 95% CI : (0.9982, 0.9992). The out sample error rate  is calcuated in follwoing R code.the result showed is 0.49%.
+
+```{r echo = TRUE} 
+testing$predright<-pred==testing$classe
+(sum(testing$predright==FALSE))/(dim(testing)[1])
+```
+follow ing are r code to build model using rpart method and evalaute prediction accuracy on testing data
+
+```{r echo = TRUE} 
+model2<-train(classe~.,method="rpart",data=training)
+pred2<-predict(model2,testing)
+confusionMatrix(testing$classe,pred2)
+library(rattle)
+fancyRpartPlot(model2$finalModel)
+```
+# conclusion
+using random forest model has good predition on testing data compared with rpart method. therefore I choose random forest as final model to predict 20 testcases.
+
+```{r echo = TRUE} 
+pred6<-predict(model1,newdata=testdata)
+pred6
+
+```
